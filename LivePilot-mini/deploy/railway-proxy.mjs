@@ -68,8 +68,18 @@ app.on("request", (request, response) => {
 });
 
 app.on("upgrade", (request, socket, head) => {
-  if (!authorized(request) || !sameOrigin(request) || !request.url?.startsWith("/browser/")) { socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n"); socket.destroy(); return; }
+  // Browser WebSocket APIs cannot set Authorization headers. The noVNC page is
+  // already Basic-Auth protected; require its same-origin Origin on this socket
+  // to prevent cross-site WebSocket hijacking while allowing the browser handshake.
+  if (!request.headers.origin || !sameOrigin(request) || !request.url?.startsWith("/browser/")) { socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n"); socket.destroy(); return; }
   const upstream = http.request({ hostname: "127.0.0.1", port: 6080, path: request.url.slice("/browser".length), method: request.method, headers: { ...request.headers, host: "127.0.0.1:6080" } });
+  upstream.on("response", response => {
+    const status = response.statusCode || 502;
+    const message = response.statusMessage || "Upstream rejected WebSocket";
+    socket.write(`HTTP/1.1 ${status} ${message}\r\nConnection: close\r\n\r\n`);
+    response.resume();
+    socket.destroy();
+  });
   upstream.on("upgrade", (response, upstreamSocket, upstreamHead) => {
     socket.write(`HTTP/1.1 ${response.statusCode} ${response.statusMessage}\r\n`);
     for (const [key, value] of Object.entries(response.headers)) {
