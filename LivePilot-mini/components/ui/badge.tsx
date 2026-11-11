@@ -1,0 +1,3 @@
+import { cn } from "@/lib/utils";
+const labels: Record<string, string> = { DRAFT:"Draft", STARTING:"Starting", RUNNING:"Running", RETRYING:"Retrying", PAUSED:"Paused", STOPPED:"Stopped", WAITING_FOR_STREAM:"Waiting for stream", WAITING_FOR_TRIGGER:"Listening", TRIGGER_QUEUED:"Queued · 10s", RATE_LIMITED:"Rate limited", AUTH_REQUIRED:"Auth required", ERROR:"Error", COMPLETED:"Completed", CONNECTED:"Connected", CONNECTING:"Connecting", DISCONNECTED:"Disconnected" };
+export function Badge({ status, className }: { status: string; className?: string }) { return <span className={cn("badge", `badge-${status.toLowerCase().replaceAll("_", "-")}`, className)}><i />{labels[status] ?? status}</span>; }

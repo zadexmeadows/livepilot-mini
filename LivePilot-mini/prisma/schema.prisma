@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model GoogleAccount {
+  id               String       @id @default(cuid())
+  displayName      String       @default("Connecting account…")
+  email            String?
+  channelName      String?
+  avatarUrl        String?
+  profileDirectory String       @unique
+  status           String       @default("CONNECTING")
+  connectedAt      DateTime?
+  lastUsedAt       DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  automations      Automation[]
+
+  @@index([status])
+}
+
+model Automation {
+  id                 String                @id @default(cuid())
+  name               String
+  youtubeUrl         String
+  videoId            String
+  streamTitle        String?
+  channelName        String?
+  message            String
+  intervalSeconds    Int
+  status              String                @default("DRAFT")
+  scheduleMode        String                @default("IMMEDIATE")
+  scheduledStartAt    DateTime?
+  stopMode            String                @default("NONE")
+  stopValue           Int?
+  stopAt              DateTime?
+  maxMessages         Int                   @default(100)
+  runUntilStopped     Boolean               @default(false)
+  messagesSent        Int                   @default(0)
+  sessionMessagesSent Int                   @default(0)
+  lastSentAt          DateTime?
+  nextSendAt          DateTime?
+  lastError           String?
+  googleAccountId     String
+  googleAccount       GoogleAccount         @relation(fields: [googleAccountId], references: [id], onDelete: Restrict)
+  executions          AutomationExecution[]
+  messageLogs         MessageLog[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  @@index([googleAccountId])
+  @@index([status])
+  @@index([nextSendAt])
+}
+
+model AutomationExecution {
+  id             String     @id @default(cuid())
+  automationId   String
+  automation     Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  startedAt      DateTime    @default(now())
+  endedAt        DateTime?
+  status         String     @default("STARTING")
+  messagesSent   Int        @default(0)
+  errorCount     Int        @default(0)
+  completionNote String?
+
+  @@index([automationId, startedAt])
+}
+
+model MessageLog {
+  id           String     @id @default(cuid())
+  automationId String?
+  automation   Automation? @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  level        String     @default("INFO")
+  status       String?
+  action       String
+  message      String
+  stream       String?
+  errorMessage String?
+  createdAt    DateTime   @default(now())
+
+  @@index([createdAt])
+  @@index([level, createdAt])
+  @@index([automationId, createdAt])
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// A durable claim prevents a rerender/reconnect from replaying an announcement.
+model StreamlabsTrigger {
+  videoId   String
+  messageId String
+  createdAt DateTime @default(now())
+
+  @@id([videoId, messageId])
+}
