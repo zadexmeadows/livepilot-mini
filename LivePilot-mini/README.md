@@ -11,6 +11,7 @@ A small Railway deployable control page based on the attached LivePilot project.
    - `BASIC_AUTH_USER`: your sign-in name for the mini app
    - `BASIC_AUTH_PASSWORD`: a long, unique password for the mini app
    - `VNC_PASSWORD`: a separate 8-character ASCII password for the remote browser console (x11vnc uses only the first eight characters)
+   - `PLAYWRIGHT_CHROMIUM_SANDBOX`: leave unset on Railway; set to `true` only on hosts that allow Chromium's Linux namespace sandbox
 
 4. Generate a Railway domain. Open it, sign in with the Basic Auth credentials, and use **Connect account** to open the remote browser console.
 5. In the remote browser, sign into YouTube manually. Close the Chrome window from the remote desktop when finished, then click **Check** beside the account. Repeat for each account.
@@ -38,6 +39,8 @@ Copy `.env.example` to `.env` first. Local manual sign-in requires an installed 
 In Railway service settings, set the healthcheck path to `/healthz`. Railway's `PORT` is handled by a small same-origin proxy, which protects the app and the remote browser console with Basic Auth. The health check path is the only unauthenticated path.
 
 The app uses SQLite at `/app/data/app.db` and stores each YouTube login under `/app/data/browser-profiles/`. Railway mounts volumes as root; the entrypoint assigns the data directory to the app user before launching Next.js and Chromium as a non-root user. Treat the volume as sensitive because it contains signed-in browser profiles. To reset all accounts, stop the service and clear the volume.
+
+Railway's standard container blocks the Linux namespace operations required by Chromium's sandbox. The browser therefore starts without that sandbox by default while still running as the unprivileged `livepilot` user. Use the remote browser only for trusted destinations such as YouTube. Set `PLAYWRIGHT_CHROMIUM_SANDBOX=true` only on a host configured to permit Chromium's namespace sandbox.
 
 ## What it does
 

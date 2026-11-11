@@ -33,7 +33,10 @@ class BrowserManager {
     if (executablePath && !fs.existsSync(executablePath)) throw new Error("The configured browser executable path does not exist.");
     return {
       headless: false as const,
-      chromiumSandbox: true,
+      // Railway's standard container blocks the Linux namespace operations
+      // Chromium needs for its sandbox. Keep the app/browser non-root and
+      // allow operators to opt back in on hosts that permit the namespace sandbox.
+      chromiumSandbox: process.env.PLAYWRIGHT_CHROMIUM_SANDBOX === "true",
       timeout: 45_000,
       executablePath: executablePath || undefined,
       channel: executablePath ? undefined : configuredChannel || undefined,
