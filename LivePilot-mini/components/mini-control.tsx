@@ -55,9 +55,11 @@ export function MiniControl() {
   const check = async (account: Account) => {
     setBusy(true); setError(""); setNotice("");
     try {
-      await request(`/api/accounts/${account.id}/check`, { method: "POST" });
+      const checked = await request<Account>(`/api/accounts/${account.id}/check`, { method: "POST" });
       await refresh();
-      setNotice("Account status refreshed.");
+      if (checked.status === "CONNECTED") setNotice("Account connected successfully.");
+      else if (checked.status === "CONNECTING") setNotice("Close the remote Chrome window, then check sign-in again.");
+      else setNotice("YouTube sign-in was not detected. Sign in in the remote browser, close Chrome, then check again.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not check account."); }
     finally { setBusy(false); }
   };
@@ -84,7 +86,7 @@ export function MiniControl() {
       <CardHeader className="section-heading"><div><h2><UsersRound size={18}/> YouTube accounts</h2><p>Each account keeps its own saved browser session.</p></div><Button disabled={busy} onClick={connect}><Plus size={16}/>Connect account</Button></CardHeader>
       <CardContent className="mini-account-list">
         {!accounts.length && <p className="helper">No accounts yet. Connect one to begin.</p>}
-        {accounts.map(account => <div className="mini-account" key={account.id}><span className={`mini-dot ${account.status === "CONNECTED" ? "ready" : ""}`}/><div><b>{account.displayName}</b><small>{account.channelName || account.status.replaceAll("_", " ")}</small></div><div className="mini-account-actions">{account.status === "CONNECTED" ? <Button variant="outline" disabled={busy} onClick={() => check(account)}><RefreshCw size={14}/>Check</Button> : <Button variant="outline" disabled={busy} onClick={() => reconnect(account)}><RefreshCw size={14}/>Sign in again</Button>}</div></div>)}
+        {accounts.map(account => <div className="mini-account" key={account.id}><span className={`mini-dot ${account.status === "CONNECTED" ? "ready" : ""}`}/><div><b>{account.displayName}</b><small>{account.channelName || account.status.replaceAll("_", " ")}</small></div><div className="mini-account-actions">{account.status === "CONNECTED" ? <Button variant="outline" disabled={busy} onClick={() => check(account)}><RefreshCw size={14}/>Check</Button> : account.status === "CONNECTING" ? <Button variant="outline" disabled={busy} onClick={() => check(account)}><RefreshCw size={14}/>Check sign-in</Button> : <Button variant="outline" disabled={busy} onClick={() => reconnect(account)}><RefreshCw size={14}/>Sign in again</Button>}</div></div>)}
         <p className="mini-auth-note"><ShieldCheck size={15}/>Sign in manually in the browser console. The app does not ask for or store your Google password.</p>
       </CardContent>
     </Card>
