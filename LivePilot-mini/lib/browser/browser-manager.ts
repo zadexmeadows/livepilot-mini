@@ -131,10 +131,13 @@ class BrowserManager {
     // Keep a separate persistent profile per account and avoid debugging/stealth flags.
     // On Linux, disable the namespace sandbox unless the host explicitly supports it.
     // shell:false keeps user-controlled paths out of shell command parsing.
+    let stderrTail = "";
     const child = spawn(executable, [
       ...(process.platform === "linux" && !options.chromiumSandbox ? ["--no-sandbox"] : []),
       `--user-data-dir=${profileDirectory}`, "--new-window", "https://www.youtube.com/",
-    ], { shell: false, stdio: "ignore", windowsHide: false });
+    ], { shell: false, stdio: ["ignore", "ignore", "pipe"], windowsHide: false });
+    child.stderr?.setEncoding("utf8");
+    child.stderr?.on("data", chunk => { stderrTail = `${stderrTail}${chunk}`.slice(-2000); });
     this.manual.set(accountId, child);
     const cleanup = () => { if (this.manual.get(accountId) === child) this.manual.delete(accountId); };
     child.once("exit", cleanup);
@@ -142,10 +145,14 @@ class BrowserManager {
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => { clear(); resolve(); }, 1800);
       const onError = () => { clear(); reject(new Error("Could not launch manual Chrome. Check the executable path and browser sandbox configuration.")); };
-      const onExit = () => { clear(); reject(new Error("Chrome closed during startup. Check the browser console for a profile-lock or sandbox error.")); };
-      const clear = () => { clearTimeout(timer); child.off("error", onError); child.off("exit", onExit); };
+      const onExit = () => {
+        clear();
+        const detail = stderrTail.trim();
+        reject(new Error(`Chrome closed during startup.${detail ? ` Browser output: ${detail}` : " Check the browser console for a profile-lock or sandbox error."}`));
+      };
+      const clear = () => { clearTimeout(timer); child.off("error", onError); child.off("close", onExit); };
       child.once("error", onError);
-      child.once("exit", onExit);
+      child.once("close", onExit);
     });
   }
 
