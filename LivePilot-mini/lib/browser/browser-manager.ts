@@ -128,9 +128,11 @@ class BrowserManager {
     if (!executable) throw new Error("Install Google Chrome or configure its executable path in Settings.");
     const profileDirectory = path.resolve(/* turbopackIgnore: true */ account.profileDirectory);
     fs.mkdirSync(profileDirectory, { recursive: true, mode: 0o700 });
-    // Normal, sandboxed browser: no automation, debugging, stealth or security-disabling flags.
+    // Keep a separate persistent profile per account and avoid debugging/stealth flags.
+    // On Linux, disable the namespace sandbox unless the host explicitly supports it.
     // shell:false keeps user-controlled paths out of shell command parsing.
     const child = spawn(executable, [
+      ...(process.platform === "linux" && !options.chromiumSandbox ? ["--no-sandbox"] : []),
       `--user-data-dir=${profileDirectory}`, "--new-window", "https://www.youtube.com/",
     ], { shell: false, stdio: "ignore", windowsHide: false });
     this.manual.set(accountId, child);
