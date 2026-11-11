@@ -14,7 +14,7 @@ A small Railway deployable control page based on the attached LivePilot project.
    - `PLAYWRIGHT_CHROMIUM_SANDBOX`: leave unset on Railway; set to `true` only on hosts that allow Chromium's Linux namespace sandbox
 
 4. Generate a Railway domain. Open it, sign in with the Basic Auth credentials, and use **Connect account** to open the remote browser console.
-5. In the remote browser, sign into YouTube manually. Close the Chrome window from the remote desktop when finished, then click **Check** beside the account. Repeat for each account.
+5. In the remote browser, sign into YouTube manually. Click **Finish sign-in** beside that account; the app closes its remote Chrome window and checks the saved session. Repeat for each account.
 6. Enter the livestream URL, select the accounts and command messages, then save and start Streamlabs Mode.
 
 The first selected account watches Streamlabs announcements. Other selected accounts join each round in sequence, using the configured delay. If no announcement arrives, the timer fallback starts a round. Keep the Railway volume attached when redeploying; deleting it removes the saved sessions and database.

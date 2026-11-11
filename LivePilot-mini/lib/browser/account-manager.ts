@@ -38,9 +38,9 @@ export async function checkGoogleAccount(accountId: string) {
 }
 
 async function inspectGoogleAccount(accountId: string) {
-  // Never attach automation, read login fields, or interrupt manual authentication.
+  // Finish-sign-in closes the manual window before checking the saved profile.
   const existingAccount = await db.googleAccount.findUniqueOrThrow({ where: { id: accountId }, include: { _count: { select: { automations: true } } } });
-  if (browserManager.isManualSignIn(accountId)) return existingAccount;
+  if (browserManager.isManualSignIn(accountId)) await browserManager.closeManualSignIn(accountId);
   if (existingAccount.status === "CONNECTING") await browserManager.openAccountSession(accountId, "https://www.youtube.com/");
   const page = await browserManager.currentPage(accountId);
   if (/accounts\.google\.com/.test(page.url())) return db.googleAccount.findUniqueOrThrow({ where: { id: accountId }, include: { _count: { select: { automations: true } } } });

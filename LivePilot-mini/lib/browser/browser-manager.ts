@@ -134,6 +134,7 @@ class BrowserManager {
     let stderrTail = "";
     const child = spawn(executable, [
       ...(process.platform === "linux" && !options.chromiumSandbox ? ["--no-sandbox"] : []),
+      "--disable-background-mode",
       `--user-data-dir=${profileDirectory}`, "--new-window", "https://www.youtube.com/",
     ], { shell: false, stdio: ["ignore", "ignore", "pipe"], windowsHide: false });
     child.stderr?.setEncoding("utf8");
@@ -153,6 +154,35 @@ class BrowserManager {
       const clear = () => { clearTimeout(timer); child.off("error", onError); child.off("close", onExit); };
       child.once("error", onError);
       child.once("close", onExit);
+    });
+  }
+
+  async closeManualSignIn(accountId: string) {
+    const child = this.manual.get(accountId);
+    if (!child) return;
+    if (child.exitCode !== null || child.signalCode !== null) {
+      this.manual.delete(accountId);
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(forceTimer);
+        clearTimeout(timeout);
+        child.off("close", onClose);
+        if (error) reject(error);
+        else resolve();
+      };
+      const onClose = () => finish();
+      const forceTimer = setTimeout(() => {
+        if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+      }, 4000);
+      const timeout = setTimeout(() => finish(new Error("Remote Chrome did not close. Close its window in the VNC desktop and try again.")), 8000);
+      child.once("close", onClose);
+      if (!child.kill("SIGTERM")) finish();
     });
   }
 
