@@ -16,6 +16,7 @@ FROM node:22-bookworm-slim AS browser-runtime
 
 ENV NODE_ENV=production \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    PLAYWRIGHT_BROWSER_CHANNEL=chrome \
     DISPLAY=:99 \
     APP_DATA_DIR=/app/data \
     DATABASE_URL=file:../data/app.db
